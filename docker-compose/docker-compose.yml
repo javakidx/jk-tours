@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Will leverage other database
+  spring-tours:
+    image: ankeyang/spring-tours:v0.1
+    container_name: spring-tours
+    ports:
+      - "8080:8080"
+      - "9092:9092"  # H2 Console port if enabled
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:h2:mem:testdb
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.h2.Driver
+      - SPRING_DATASOURCE_USERNAME=sa
+      - SPRING_DATASOURCE_PASSWORD=
+      - SPRING_H2_CONSOLE_ENABLED=true
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+    depends_on:
+      - h2-db
+    networks:
+      - spring-tours-network
+      -
+  # Generated with AI. Will remove this.
+  h2-db:
+    image: oscarfonts/h2:latest
+    container_name: h2-db
+    environment:
+      - H2_OPTIONS=-ifNotExists
+      - H2_DATABASE=testdb
+      - H2_USER=sa
+      - H2_PASSWORD=
+    ports:
+      - "1521:1521"  # H2 TCP port
+      - "8082:8082"  # H2 Web Console
+    volumes:
+      - h2-data:/opt/h2-data
+    networks:
+      - spring-tours-network
+
+networks:
+  spring-tours-network:
+    driver: bridge
+
+volumes:
+  h2-data:
