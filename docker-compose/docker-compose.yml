@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Will leverage other database
   spring-tours:
@@ -16,25 +14,49 @@ services:
       - SPRING_H2_CONSOLE_ENABLED=true
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_JPA_SHOW_SQL=true
-    depends_on:
-      - h2-db
+#      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,prometheus
+#      - MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED=true
+#      - MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED=true
+#      - MANAGEMENT_SERVER_PORT=8080
+#      - MANAGEMENT_ENDPOINTS_WEB_BASE-PATH=/actuator
     networks:
       - spring-tours-network
-      -
-  # Generated with AI. Will remove this.
-  h2-db:
-    image: oscarfonts/h2:latest
-    container_name: h2-db
-    environment:
-      - H2_OPTIONS=-ifNotExists
-      - H2_DATABASE=testdb
-      - H2_USER=sa
-      - H2_PASSWORD=
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:v3.4.2
+    container_name: prometheus
     ports:
-      - "1521:1521"  # H2 TCP port
-      - "8082:8082"  # H2 Web Console
+      - "9090:9090"
     volumes:
-      - h2-data:/opt/h2-data
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'  # Keep data for 30 days
+    depends_on:
+      - spring-tours
+    networks:
+      - spring-tours-network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:12.0.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
     networks:
       - spring-tours-network
 
@@ -43,4 +65,5 @@ networks:
     driver: bridge
 
 volumes:
-  h2-data:
+  prometheus_data:
+  grafana_data:
